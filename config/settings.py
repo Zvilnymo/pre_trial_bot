@@ -22,9 +22,8 @@ if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
 
 # Admin
 ADMIN_TOKEN = os.getenv('ADMIN_TOKEN', 'f7T9vQ1111wLp2Gx8Z')
-ADMIN_TELEGRAM_IDS = [int(id.strip()) for id in os.getenv('ADMIN_TELEGRAM_IDS', '').split(',') if id.strip()]
 
-# Server
+# Server (managed by Render.com)
 PORT = int(os.getenv('PORT', '8080'))
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 

@@ -126,3 +126,17 @@ class ScheduledMessage(Base):
 
     def __repr__(self):
         return f"<ScheduledMessage(type='{self.message_type}', user={self.telegram_id})>"
+
+
+class Admin(Base):
+    __tablename__ = 'pt_admins'
+    __table_args__ = {'schema': 'pretrial'}
+
+    telegram_id = Column(Integer, primary_key=True)
+    full_name = Column(String(255), nullable=True)
+    username = Column(String(255), nullable=True)
+    added_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+
+    def __repr__(self):
+        return f"<Admin(telegram_id={self.telegram_id}, username='{self.username}')>"

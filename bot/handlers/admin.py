@@ -3,20 +3,17 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from bot.keyboards import reply, inline
 from services import user_service, conference_service
-from config import ADMIN_TOKEN, ADMIN_TELEGRAM_IDS
+from services.admin_service import is_admin, register_admin
+from config import ADMIN_TOKEN
 from database import ClientCategory
 
 logger = logging.getLogger(__name__)
 
 
-def is_admin(telegram_id: int) -> bool:
-    """Check if user is admin"""
-    return telegram_id in ADMIN_TELEGRAM_IDS
-
-
 async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle admin deep link"""
     telegram_id = update.effective_user.id
+    user = update.effective_user
 
     # Check if started with admin token
     args = context.args
@@ -25,14 +22,15 @@ async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         token = args[0].replace('admin_', '')
 
         if token == ADMIN_TOKEN:
-            if telegram_id not in ADMIN_TELEGRAM_IDS:
-                await update.message.reply_text(
-                    "❌ У вас немає доступу до адмін-панелі.\nЗверніться до адміністратора."
-                )
-                return
+            # Auto-register admin if they have valid token
+            register_admin(
+                telegram_id=telegram_id,
+                full_name=user.full_name,
+                username=user.username
+            )
 
             await update.message.reply_text(
-                "🔐 Ласкаво просимо до адмін-панелі!\n\nОберіть дію:",
+                "🔐 Ласкаво просимо до адмін-панелі!\n\nВи додані як адміністратор.\n\nОберіть дію:",
                 reply_markup=reply.get_admin_menu_keyboard()
             )
             return

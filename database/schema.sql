@@ -75,6 +75,15 @@ CREATE TABLE IF NOT EXISTS pretrial.pt_scheduled_messages (
     sent_at TIMESTAMP
 );
 
+-- Admins table
+CREATE TABLE IF NOT EXISTS pretrial.pt_admins (
+    telegram_id BIGINT PRIMARY KEY,
+    full_name VARCHAR(255),
+    username VARCHAR(255),
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_pt_users_phone ON pretrial.pt_users(phone_number);
 CREATE INDEX IF NOT EXISTS idx_pt_users_category ON pretrial.pt_users(client_category);
