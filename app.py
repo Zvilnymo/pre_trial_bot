@@ -1,16 +1,60 @@
 """
-Minimal Flask server for receiving Bitrix24 webhooks
-Runs separately from the bot in polling mode
+Main application file - runs both Flask webhook server and Telegram bot
 """
 import logging
+import asyncio
+from threading import Thread
 from flask import Flask, request, jsonify
-from config import PORT, DEBUG, setup_logging
-from database import get_session, User
+from telegram import Update
+from telegram.ext import Application
 
+from config import TELEGRAM_BOT_TOKEN, PORT, DEBUG, setup_logging
+from config import STAGE_MAPPING, STAGE_DESCRIPTIONS
+from database import init_db, get_session, User
+from bot.main import setup_handlers
+
+# Setup logging
 setup_logging(DEBUG)
 logger = logging.getLogger(__name__)
 
+# Flask app
 app = Flask(__name__)
+
+# Global telegram application
+telegram_app = None
+
+
+def create_telegram_app():
+    """Create and configure telegram application"""
+    global telegram_app
+
+    telegram_app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+    # Setup all handlers
+    setup_handlers(telegram_app)
+
+    logger.info("Telegram application created")
+    return telegram_app
+
+
+def run_telegram_bot():
+    """Run telegram bot in polling mode in separate thread"""
+    logger.info("Starting Telegram bot in polling mode...")
+
+    # Initialize database
+    init_db()
+    logger.info("Database initialized")
+
+    # Create telegram app
+    create_telegram_app()
+
+    # Run polling
+    telegram_app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+
+
+# Start telegram bot in background thread
+bot_thread = Thread(target=run_telegram_bot, daemon=True)
+bot_thread.start()
 
 
 @app.route('/')
@@ -18,8 +62,9 @@ def index():
     """Health check"""
     return jsonify({
         'status': 'online',
-        'service': 'Dosudebka Bot Webhook Server',
-        'version': '1.0.0'
+        'service': 'Dosudebka Bot',
+        'version': '1.0.0',
+        'bot_running': telegram_app is not None
     })
 
 
@@ -47,24 +92,20 @@ def bitrix_webhook():
                         # Update stage in database
                         user_service.update_stage(user.telegram_id, new_stage)
 
-                        # Send notification to user via bot
+                        # Send notification to user
                         from bot.utils import messages
-                        from config import STAGE_MAPPING, STAGE_DESCRIPTIONS
 
                         stage_display = STAGE_MAPPING.get(new_stage, new_stage)
                         stage_desc = STAGE_DESCRIPTIONS.get(stage_display, '')
 
                         message = messages.STAGE_UPDATED.format(stage_display, stage_desc)
 
-                        # Send via Telegram bot API directly
-                        import requests as req
-                        from config import TELEGRAM_BOT_TOKEN
-
-                        telegram_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                        req.post(telegram_url, json={
-                            'chat_id': user.telegram_id,
-                            'text': message
-                        })
+                        # Send message via telegram bot
+                        if telegram_app:
+                            asyncio.run(telegram_app.bot.send_message(
+                                chat_id=user.telegram_id,
+                                text=message
+                            ))
 
                         logger.info(f"Stage updated for user {user.telegram_id}: {new_stage}")
                         return jsonify({'status': 'ok', 'message': 'Stage updated'}), 200
