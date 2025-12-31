@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Користувачі</title>
+    <link rel="stylesheet" href="/static/admin.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        table { width: 100%; background: white; border-collapse: collapse; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        th { background: #667eea; color: white; }
+        tr:hover { background: #f9f9f9; }
+        .back { margin-bottom: 20px; }
+        .back a { color: #667eea; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="/admin">← Назад до панелі</a></div>
+    <h1>Користувачі ({{ users|length }})</h1>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>ПІБ</th>
+            <th>Телефон</th>
+            <th>Категорія</th>
+            <th>Стадія</th>
+            <th>Дата реєстрації</th>
+        </tr>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.telegram_id }}</td>
+            <td>{{ user.full_name }}</td>
+            <td>{{ user.phone_number }}</td>
+            <td>{{ user.client_category.value if user.client_category else '-' }}</td>
+            <td>{{ user.current_stage or '-' }}</td>
+            <td>{{ user.registration_date.strftime('%d.%m.%Y') if user.registration_date else '-' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
