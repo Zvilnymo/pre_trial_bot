@@ -14,7 +14,8 @@ class ClientCategory(enum.Enum):
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = 'pt_users'
+    __table_args__ = {'schema': 'pretrial'}
 
     telegram_id = Column(Integer, primary_key=True)
     full_name = Column(String(255), nullable=False)
@@ -39,10 +40,11 @@ class User(Base):
 
 
 class QuestionnaireAnswer(Base):
-    __tablename__ = 'questionnaire_answers'
+    __tablename__ = 'pt_questionnaire_answers'
+    __table_args__ = {'schema': 'pretrial'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    telegram_id = Column(Integer, ForeignKey('users.telegram_id'), nullable=False)
+    telegram_id = Column(Integer, ForeignKey('pretrial.pt_users.telegram_id'), nullable=False)
     question_number = Column(Integer, nullable=False)
     answer_text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -55,10 +57,11 @@ class QuestionnaireAnswer(Base):
 
 
 class Document(Base):
-    __tablename__ = 'documents'
+    __tablename__ = 'pt_documents'
+    __table_args__ = {'schema': 'pretrial'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    telegram_id = Column(Integer, ForeignKey('users.telegram_id'), nullable=False)
+    telegram_id = Column(Integer, ForeignKey('pretrial.pt_users.telegram_id'), nullable=False)
     document_type = Column(String(255), nullable=False)
     file_name = Column(String(255), nullable=False)
     google_drive_file_id = Column(String(255), nullable=True)
@@ -73,7 +76,8 @@ class Document(Base):
 
 
 class Conference(Base):
-    __tablename__ = 'conferences'
+    __tablename__ = 'pt_conferences'
+    __table_args__ = {'schema': 'pretrial'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(255), nullable=False)
@@ -92,11 +96,12 @@ class Conference(Base):
 
 
 class ConferenceRegistration(Base):
-    __tablename__ = 'conference_registrations'
+    __tablename__ = 'pt_conference_registrations'
+    __table_args__ = {'schema': 'pretrial'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    conference_id = Column(Integer, ForeignKey('conferences.id'), nullable=False)
-    telegram_id = Column(Integer, ForeignKey('users.telegram_id'), nullable=False)
+    conference_id = Column(Integer, ForeignKey('pretrial.pt_conferences.id'), nullable=False)
+    telegram_id = Column(Integer, ForeignKey('pretrial.pt_users.telegram_id'), nullable=False)
     registered_at = Column(DateTime, default=datetime.utcnow)
     attended = Column(Boolean, default=False)
 
@@ -109,7 +114,8 @@ class ConferenceRegistration(Base):
 
 
 class ScheduledMessage(Base):
-    __tablename__ = 'scheduled_messages'
+    __tablename__ = 'pt_scheduled_messages'
+    __table_args__ = {'schema': 'pretrial'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     telegram_id = Column(Integer, nullable=False)
