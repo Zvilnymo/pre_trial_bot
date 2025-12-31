@@ -1,6 +1,10 @@
 # Telegram Bot
 python-telegram-bot[job-queue]==20.7
 
+# Webhook server for Bitrix
+flask==3.0.0
+gunicorn==21.2.0
+
 # Database
 sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
