@@ -1,10 +1,5 @@
 # Telegram Bot
-python-telegram-bot==20.7
-python-telegram-bot[webhooks]==20.7
-
-# Web Framework
-flask[async]==3.0.0
-gunicorn==21.2.0
+python-telegram-bot[job-queue]==20.7
 
 # Database
 sqlalchemy==2.0.23
