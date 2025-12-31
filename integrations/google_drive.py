@@ -1,13 +1,14 @@
 import os
 import io
+import json
 import logging
-from typing import Optional
+from typing import Optional, Dict, List
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaFileUpload
-from config import GOOGLE_DRIVE_FOLDER_ID, GOOGLE_CREDENTIALS_FILE
+from config import GOOGLE_DRIVE_FOLDER_ID
 
 logger = logging.getLogger(__name__)
 
@@ -22,29 +23,57 @@ class GoogleDriveClient:
         self._authenticate()
 
     def _authenticate(self):
-        """Authenticate with Google Drive API"""
-        token_file = 'token.json'
+        """Authenticate with Google Drive API using OAuth token from environment"""
+        try:
+            # ПРИОРИТЕТ 1: OAuth токен из переменной окружения (для production на Render.com)
+            oauth_token = os.getenv('GOOGLE_OAUTH_TOKEN')
 
-        if os.path.exists(token_file):
-            self.creds = Credentials.from_authorized_user_file(token_file, SCOPES)
+            if oauth_token:
+                logger.info("Using OAuth token from environment variable")
+                token_data = json.loads(oauth_token)
 
-        if not self.creds or not self.creds.valid:
-            if self.creds and self.creds.expired and self.creds.refresh_token:
-                self.creds.refresh(Request())
+                self.creds = Credentials(
+                    token=token_data.get('token'),
+                    refresh_token=token_data.get('refresh_token'),
+                    token_uri=token_data.get('token_uri'),
+                    client_id=token_data.get('client_id'),
+                    client_secret=token_data.get('client_secret'),
+                    scopes=token_data.get('scopes', SCOPES)
+                )
+
+            # ПРИОРИТЕТ 2: Файл token.json (для локальной разработки)
+            elif os.path.exists('token.json'):
+                logger.info("Using token.json file for local development")
+                self.creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+
             else:
-                if not os.path.exists(GOOGLE_CREDENTIALS_FILE):
-                    logger.error(f"Credentials file not found: {GOOGLE_CREDENTIALS_FILE}")
-                    return
+                logger.error(
+                    "Google Drive credentials not found!\n"
+                    "For production: Set GOOGLE_OAUTH_TOKEN environment variable\n"
+                    "For local development: Run 'python generate_oauth_token.py' to create token.json"
+                )
+                raise ValueError("Google Drive credentials not configured")
 
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    GOOGLE_CREDENTIALS_FILE, SCOPES)
-                self.creds = flow.run_local_server(port=0)
+            # Обновление токена если истёк
+            if self.creds.expired and self.creds.refresh_token:
+                logger.info("Refreshing expired OAuth token")
+                self.creds.refresh(Request())
 
-            with open(token_file, 'w') as token:
-                token.write(self.creds.to_json())
+                # Если токен из файла, сохраняем обновлённый
+                if os.path.exists('token.json') and not oauth_token:
+                    with open('token.json', 'w') as token:
+                        token.write(self.creds.to_json())
 
-        self.service = build('drive', 'v3', credentials=self.creds)
-        logger.info("Google Drive authenticated successfully")
+            # Создание API сервиса
+            self.service = build('drive', 'v3', credentials=self.creds)
+            logger.info("Google Drive authenticated successfully")
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in GOOGLE_OAUTH_TOKEN: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error authenticating with Google Drive: {e}")
+            raise
 
     def create_folder(self, folder_name: str, parent_folder_id: str = None) -> Optional[str]:
         """Create folder in Google Drive"""

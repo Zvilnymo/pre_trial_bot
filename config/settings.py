@@ -13,7 +13,7 @@ BITRIX_CATEGORY_ID = int(os.getenv('BITRIX_CATEGORY_ID', '7'))
 
 # Google Drive
 GOOGLE_DRIVE_FOLDER_ID = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
-GOOGLE_CREDENTIALS_FILE = 'credentials.json'
+GOOGLE_OAUTH_TOKEN = os.getenv('GOOGLE_OAUTH_TOKEN')
 
 # Database
 DATABASE_URL = os.getenv('DATABASE_URL')

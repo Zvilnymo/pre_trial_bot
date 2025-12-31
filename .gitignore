@@ -28,7 +28,8 @@ wheels/
 .installed.cfg
 *.egg
 
-# Google credentials
+# Google OAuth credentials (локальные файлы - НЕ коммитим!)
+client_secret.json
 credentials.json
 token.pickle
 token.json
