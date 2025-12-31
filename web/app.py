@@ -1,11 +1,10 @@
 import logging
 import asyncio
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session
-from telegram import Update, Bot
+from flask import Flask, request, jsonify
+from telegram import Update
 from telegram.ext import Application
-from config import TELEGRAM_BOT_TOKEN, WEBHOOK_URL, PORT, DEBUG, ADMIN_TOKEN, setup_logging
-from database import init_db
-import os
+from config import TELEGRAM_BOT_TOKEN, WEBHOOK_URL, PORT, DEBUG, setup_logging
+from database import init_db, get_session, User
 
 # Setup logging
 setup_logging(DEBUG)
@@ -13,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 # Flask app
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
 
 # Telegram bot application
 telegram_app = None
@@ -36,7 +34,7 @@ def create_telegram_app():
 
 @app.route('/')
 def index():
-    """Index page"""
+    """Health check endpoint"""
     return jsonify({
         'status': 'online',
         'service': 'Dosudebka Bot',
@@ -66,13 +64,12 @@ def bitrix_webhook():
         # Extract deal info
         event = data.get('event')
 
-        if event == 'ONCRMDE ALUPDATE':
+        if event == 'ONCRMDEALUPDATE':
             deal_id = data['data']['FIELDS']['ID']
             new_stage = data['data']['FIELDS'].get('STAGE_ID')
 
             if new_stage:
                 from services import user_service
-                from database import get_session, User
 
                 # Find user by deal_id
                 with get_session() as db_session:
@@ -108,79 +105,6 @@ async def send_stage_update_notification(telegram_id: int, new_stage: str):
         await telegram_app.bot.send_message(chat_id=telegram_id, text=message)
     except Exception as e:
         logger.error(f"Error sending stage update notification: {e}")
-
-
-# Admin panel routes
-@app.route('/admin')
-def admin_panel():
-    """Admin panel main page"""
-    if 'admin_authenticated' not in session:
-        return redirect(url_for('admin_login'))
-
-    from services import user_service, conference_service
-    from database import ClientCategory
-
-    # Get statistics
-    total_users = user_service.get_user_count()
-    crypto_users = len(user_service.get_all_users(ClientCategory.CRYPTO))
-    mfo_users = len(user_service.get_all_users(ClientCategory.MFO))
-    bank_users = len(user_service.get_all_users(ClientCategory.BANK))
-    active_conferences = len(conference_service.get_active_conferences())
-
-    return render_template('admin/dashboard.html',
-                           total_users=total_users,
-                           crypto_users=crypto_users,
-                           mfo_users=mfo_users,
-                           bank_users=bank_users,
-                           active_conferences=active_conferences)
-
-
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    """Admin login page"""
-    if request.method == 'POST':
-        token = request.form.get('token')
-        if token == ADMIN_TOKEN:
-            session['admin_authenticated'] = True
-            return redirect(url_for('admin_panel'))
-        else:
-            return render_template('admin/login.html', error='Невірний токен')
-
-    return render_template('admin/login.html')
-
-
-@app.route('/admin/logout')
-def admin_logout():
-    """Admin logout"""
-    session.pop('admin_authenticated', None)
-    return redirect(url_for('admin_login'))
-
-
-@app.route('/admin/users')
-def admin_users():
-    """Admin users list"""
-    if 'admin_authenticated' not in session:
-        return redirect(url_for('admin_login'))
-
-    from services import user_service
-
-    category = request.args.get('category')
-    users = user_service.get_all_users()
-
-    return render_template('admin/users.html', users=users)
-
-
-@app.route('/admin/conferences')
-def admin_conferences():
-    """Admin conferences list"""
-    if 'admin_authenticated' not in session:
-        return redirect(url_for('admin_login'))
-
-    from services import conference_service
-
-    conferences = conference_service.get_active_conferences()
-
-    return render_template('admin/conferences.html', conferences=conferences)
 
 
 async def setup_webhook():
